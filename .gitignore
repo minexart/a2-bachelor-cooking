@@ -43,3 +43,9 @@ example
 /android
 .claude/
 .vscode/
+
+# Gemini CLI files
+.geminiignore
+GEMINI.md
+.gemini/
+
