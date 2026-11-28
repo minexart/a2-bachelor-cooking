@@ -22,7 +22,7 @@ export default function AboutScreen({ navigation }: any) {
       </View>
 
         <Pressable style={styles.button} onPress={() => navigation.navigate("Home")}>
-          <Text style={styles.button}>Back to Home</Text>
+          <Text style={styles.buttonText}>Back to Home</Text>
         </Pressable>
 
     </ScrollView>

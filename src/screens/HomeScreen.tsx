@@ -18,8 +18,9 @@ export default function HomeScreen({navigation }: any)
                <Text style={styles.buttonText}>View Recipes</Text> 
             </Pressable>
 
-            <Pressable onPress={() => navigation.navigate("About")}>
-                <Text>About Us</Text>
+            <Pressable style={[styles.button, styles.secondaryButton]}
+             onPress={() => navigation.navigate("About")}>
+                <Text style={[styles.buttonText, styles.secondaryText]}>About Us</Text>
             </Pressable>
         </View>
     );
