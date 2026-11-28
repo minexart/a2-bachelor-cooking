@@ -1,105 +1,133 @@
-import React from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { findRecipe } from "../data/recipes";
-import { COLORS } from "../styles/theme";
+import React, { useState } from "react";
+import { FlatList, Image, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { categories } from "@/data/recipes";
+import { COLORS } from "@/styles/theme";
 
-export default function RecipeDetailsScreen({ navigation, route }: any) {
-  //read the recipe id sent from the list screen
-  const recipeId = route.params?.recipeId;
-  //look up the full recipe - undefined if the id is missing or wrong
-  const recipe = findRecipe(recipeId);
+export default function RecipeListScreen({ navigation }: any) {
+  //state/var for the search box text (from Kavenash)
+  const [searchText, setSearchText] = useState("");
 
-  //missing or invalid data: show a clear message instead of crashing
-  if (!recipe) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>Sorry, this recipe could not be found.</Text>
-        <Pressable style={styles.backButton} onPress={() => navigation.navigate("RecipeList")}>
-          <Text style={styles.backText}>Back to Recipe List</Text>
-        </Pressable>
-      </View>
-    );
-  }
+  //keep only recipes whose name matches searchText (not case sensitive),
+  //then hide categories that end up with 0 recipes
+  const filteredCategories = categories
+    .map((category) => ({
+      ...category,
+      recipes: category.recipes.filter((recipe) =>
+        recipe.name.toLowerCase().includes(searchText.toLowerCase())
+      ),
+    }))
+    .filter((category) => category.recipes.length > 0);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Image source={recipe.image} style={styles.image} />
-      <Text style={styles.title}>{recipe.name}</Text>
+    <View style={styles.container}>
+      <Text style={styles.heading}>Choose a recipe</Text>
 
-      {/* quick facts - "Not available" if a value is missing */}
-      <View style={styles.infoRow}>
-        <Text style={styles.infoBox}>⏱ {recipe.prepTime || "Not available"}</Text>
-        <Text style={styles.infoBox}>📊 {recipe.difficulty || "Not available"}</Text>
-        <Text style={styles.infoBox}>🍽 {recipe.servings || "?"} servings</Text>
-      </View>
+      {/* Feature 1: Search (label required) */}
+      <Text style={styles.feature}>Feature 1: Search</Text>
+      <TextInput
+        style={styles.searchBox}
+        placeholder="🔍 Search recipes..."
+        placeholderTextColor="#999"
+        value={searchText}
+        onChangeText={setSearchText}
+      />
 
-      <Text style={styles.sectionTitle}>Ingredients</Text>
-      {recipe.ingredients.length === 0 ? (
-        <Text style={styles.missing}>No ingredients listed.</Text>
-      ) : (
-        recipe.ingredients.map((ingredient) => (
-          <Text key={ingredient.name} style={styles.listItem}>
-            • {ingredient.amount} {ingredient.unit} {ingredient.name}
-          </Text>
-        ))
-      )}
+      {/* FlatList loops over the filtered categories */}
+      <FlatList
+        data={filteredCategories}
+        keyExtractor={(item) => item.id}
+        //shown when nothing matches the search
+        ListEmptyComponent={
+          <Text style={styles.empty}>No recipes match "{searchText}".</Text>
+        }
+        renderItem={({ item }) => (
+          <View style={styles.category}>
+            <Text style={styles.categoryName}>{item.name}</Text>
 
-      <Text style={styles.sectionTitle}>Instructions</Text>
-      {recipe.steps.map((step, index) => (
-        <Text key={index} style={styles.listItem}>
-          {index + 1}. {step}
-        </Text>
-      ))}
-
-      {/* Back button - returns to the Recipe List (required) */}
-      <Pressable style={styles.backButton} onPress={() => navigation.navigate("RecipeList")}>
-        <Text style={styles.backText}>Back to Recipe List</Text>
-      </Pressable>
-    </ScrollView>
+            {item.recipes.map((recipe) => (
+              <Pressable
+                key={recipe.id}
+                //highlight card while pressed (from Kavenash)
+                style={({ pressed }) => [
+                  styles.recipeCard,
+                  pressed && styles.cardPressed,
+                ]}
+                onPress={() =>
+                  navigation.navigate("RecipeDetails", { recipeId: recipe.id })
+                }
+              >
+                <Image source={recipe.image} style={styles.image} />
+                <View style={styles.recipeInfo}>
+                  <Text style={styles.recipeName}>{recipe.name}</Text>
+                  <Text style={styles.recipeMeta}>
+                    {recipe.prepTime} · {recipe.difficulty}
+                  </Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        )}
+        //Back button at the bottom of the list
+        ListFooterComponent={
+          <Pressable
+            style={styles.backButton}
+            onPress={() => navigation.navigate("Home")}
+          >
+            <Text style={styles.backText}>Back to Home</Text>
+          </Pressable>
+        }
+      />
+    </View>
   );
 }
 
+//external styling
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: 20 },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 25,
-    backgroundColor: COLORS.background,
-  },
-  errorText: { fontSize: 17, color: "#B03030", textAlign: "center", marginBottom: 20 },
-  image: { width: "100%", height: 220, borderRadius: 14 },
-  title: { fontSize: 26, fontWeight: "bold", color: COLORS.dark, marginTop: 15 },
-  infoRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 10 },
-  infoBox: {
+  container: { flex: 1, backgroundColor: COLORS.background, paddingHorizontal: 15 },
+  heading: { fontSize: 22, fontWeight: "bold", color: COLORS.dark, marginVertical: 15 },
+  feature: { fontSize: 12, color: COLORS.grey, marginBottom: 4 },
+  searchBox: {
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    marginRight: 8,
-    marginBottom: 8,
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 15,
     color: COLORS.dark,
+    marginBottom: 15,
   },
-  sectionTitle: {
-    fontSize: 19,
+  empty: { fontSize: 15, color: COLORS.grey, textAlign: "center", marginTop: 30 },
+  category: { marginBottom: 20 },
+  categoryName: {
+    fontSize: 18,
     fontWeight: "bold",
     color: COLORS.primary,
-    marginTop: 20,
     marginBottom: 8,
   },
-  listItem: { fontSize: 15, color: COLORS.dark, lineHeight: 24 },
-  missing: { fontSize: 15, color: COLORS.grey, fontStyle: "italic" },
+  recipeCard: {
+    flexDirection: "row",
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 10,
+    alignItems: "center",
+  },
+  cardPressed: {
+    opacity: 0.7,
+    backgroundColor: COLORS.border,
+  },
+  image: { width: 80, height: 80, borderRadius: 10 },
+  recipeInfo: { marginLeft: 12, flex: 1 },
+  recipeName: { fontSize: 16, fontWeight: "bold", color: COLORS.dark },
+  recipeMeta: { fontSize: 14, color: COLORS.grey, marginTop: 4 },
   backButton: {
     backgroundColor: COLORS.primary,
     paddingVertical: 14,
-    paddingHorizontal: 20,
     borderRadius: 10,
     alignItems: "center",
-    marginTop: 25,
+    marginVertical: 20,
   },
   backText: { color: "white", fontSize: 16, fontWeight: "bold" },
 });
